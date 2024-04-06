@@ -1,3 +1,4 @@
+import numpy as np
 import pygame
 import sys
 import random
@@ -88,9 +89,10 @@ class TicTacToe:
         font = pygame.font.Font(None, 50)
         if player == 'X':
             text = font.render('Player X wins!', True, (0, 255, 0))
+            print("Player X wins!")
         else:
             text = font.render('Player O wins!', True, (0, 255, 0))
-
+            print("Player O wins!")
         self.screen.blit(text, (self.WIDTH // 2 - text.get_width() // 2, self.HEIGHT // 2 - text.get_height() // 2))
 
     def ai_move(self):
@@ -122,142 +124,196 @@ class TicTacToe:
                 return
 
 
-    # def minimax(self, depth, is_maximizing):
-    #     if self.check_win('O'):
-    #         return {'score': 1, 'row': None, 'col': None}
-    #     elif self.check_win('X'):
-    #         return {'score': -1, 'row': None, 'col': None}
-    #     elif self.check_draw():
-    #         return {'score': 0, 'row': None, 'col': None}
+    def minimax(self, depth, is_maximizing):
+        if self.check_win('O'):
+            return {'score': 1, 'row': None, 'col': None}
+        elif self.check_win('X'):
+            return {'score': -1, 'row': None, 'col': None}
+        elif self.check_draw():
+            return {'score': 0, 'row': None, 'col': None}
 
-    #     if is_maximizing:
-    #         best_score = {'score': -float('inf'), 'row': None, 'col': None}
-    #         symbol = 'O'
-    #     else:
-    #         best_score = {'score': float('inf'), 'row': None, 'col': None}
-    #         symbol = 'X'
+        if is_maximizing:
+            best_score = {'score': -float('inf'), 'row': None, 'col': None}
+            symbol = 'O'
+        else:
+            best_score = {'score': float('inf'), 'row': None, 'col': None}
+            symbol = 'X'
 
-    #     for row in range(self.BOARD_ROWS):
-    #         for col in range(self.BOARD_COLS):
-    #             if self.board[row][col] is None:
-    #                 self.board[row][col] = symbol
-    #                 current_score = self.minimax(depth + 1, not is_maximizing)
-    #                 self.board[row][col] = None
-    #                 current_score['row'] = row
-    #                 current_score['col'] = col
+        for row in range(self.BOARD_ROWS):
+            for col in range(self.BOARD_COLS):
+                if self.board[row][col] is None:
+                    self.board[row][col] = symbol
+                    current_score = self.minimax(depth + 1, not is_maximizing)
+                    self.board[row][col] = None
+                    current_score['row'] = row
+                    current_score['col'] = col
 
-    #                 if is_maximizing and current_score['score'] > best_score['score']:
-    #                     best_score = current_score
-    #                 elif not is_maximizing and current_score['score'] < best_score['score']:
-    #                     best_score = current_score
+                    if is_maximizing and current_score['score'] > best_score['score']:
+                        best_score = current_score
+                    elif not is_maximizing and current_score['score'] < best_score['score']:
+                        best_score = current_score
 
-    #     return best_score
+        return best_score
+    def q_learning(self, alpha=0.5, gamma=0.9, epsilon=0.1):
+        state = self.get_state()
+        if np.random.uniform(0, 1) < epsilon:
+            # Explore: select a random action
+            while True:
+                row = np.random.randint(0, self.BOARD_ROWS)
+                col = np.random.randint(0, self.BOARD_COLS)
+                if self.board[row][col] is None:
+                    break
+        else:
+            # Exploit: select the action with max value (future reward)
+            q_values = self.q_table[state]
+            indices = np.where(q_values == np.max(q_values))[0]
+            action = np.random.choice(indices)
 
-    # def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta):
-    #     if self.check_win('O'):
-    #         return {'score': 1, 'row': None, 'col': None}
-    #     elif self.check_win('X'):
-    #         return {'score': -1, 'row': None, 'col': None}
-    #     elif self.check_draw():
-    #         return {'score': 0, 'row': None, 'col': None}
+        # Perform the action and get the reward
+        self.board[row][col] = 'X'
+        if self.check_win('X'):
+            reward = 1
+        elif self.check_draw():
+            reward = 0
+        else:
+            reward = -0.01
 
-    #     if is_maximizing:
-    #         best_score = {'score': -float('inf'), 'row': None, 'col': None}
-    #         symbol = 'O'
-    #     else:
-    #         best_score = {'score': float('inf'), 'row': None, 'col': None}
-    #         symbol = 'X'
+        # Update Q-table for Q(s, a)
+        next_state = self.get_state()
+        self.q_table[state][action] = self.q_table[state][action] + alpha * (reward + gamma * np.max(self.q_table[next_state]) - self.q_table[state][action])
 
-    #     for row in range(self.BOARD_ROWS):
-    #         for col in range(self.BOARD_COLS):
-    #             if self.board[row][col] is None:
-    #                 self.board[row][col] = symbol
-    #                 current_score = self.minimax_alpha_beta(depth + 1, not is_maximizing, alpha, beta)
-    #                 self.board[row][col] = None
-    #                 current_score['row'] = row
-    #                 current_score['col'] = col
+        return row, col
+    
+    def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta):
+        if self.check_win('O'):
+            return {'score': 1, 'row': None, 'col': None}
+        elif self.check_win('X'):
+            return {'score': -1, 'row': None, 'col': None}
+        elif self.check_draw():
+            return {'score': 0, 'row': None, 'col': None}
 
-    #                 if is_maximizing:
-    #                     if current_score['score'] > best_score['score']:
-    #                         best_score = current_score
-    #                     alpha = max(alpha, best_score['score'])
-    #                     if beta <= alpha:
-    #                         return best_score
-    #                 else:
-    #                     if current_score['score'] < best_score['score']:
-    #                         best_score = current_score
-    #                     beta = min(beta, best_score['score'])
-    #                     if beta <= alpha:
-    #                         return best_score
+        if is_maximizing:
+            best_score = {'score': -float('inf'), 'row': None, 'col': None}
+            symbol = 'O'
+        else:
+            best_score = {'score': float('inf'), 'row': None, 'col': None}
+            symbol = 'X'
 
-    #     return best_score
+        for row in range(self.BOARD_ROWS):
+            for col in range(self.BOARD_COLS):
+                if self.board[row][col] is None:
+                    self.board[row][col] = symbol
+                    current_score = self.minimax_alpha_beta(depth + 1, not is_maximizing, alpha, beta)
+                    self.board[row][col] = None
+                    current_score['row'] = row
+                    current_score['col'] = col
+
+                    if is_maximizing:
+                        if current_score['score'] > best_score['score']:
+                            best_score = current_score
+                        alpha = max(alpha, best_score['score'])
+                        if beta <= alpha:
+                            return best_score
+                    else:
+                        if current_score['score'] < best_score['score']:
+                            best_score = current_score
+                        beta = min(beta, best_score['score'])
+                        if beta <= alpha:
+                            return best_score
+
+        return best_score
 
     def game_loop(self):
         while True:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    sys.exit()
+            # for event in pygame.event.get():
+                # if event.type == pygame.QUIT:
+                #     sys.exit()
                 
-                if self.player == 'O' and not self.game_over:
-                    self.ai_move()
-                    if self.check_win(self.player):
-                        self.game_over = True
-                        self.draw_figures()
-                        self.display_winner(self.player)
-                        break
-                    self.player = 'X'
+            if self.player == 'O' and not self.game_over:
+                self.ai_move()
+                if self.check_win(self.player):
+                    self.game_over = True
                     self.draw_figures()
-                    
-                # elif self.player == 'X' and not self.game_over:
-                #     move = self.minimax(0, False)
-                #     if move['row'] is not None and move['col'] is not None:
-                #         self.board[move['row']][move['col']] = 'X'
-                #     if self.check_win(self.player):
-                #         self.game_over = True
-                #         self.draw_figures()
-                #         self.display_winner(self.player)
-                #         break
-                #     self.player = 'O'
-                #     self.draw_figures()
-                    
-
-                if event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
-                    mouseX = event.pos[0]
-                    mouseY = event.pos[1]
-                    clicked_row = int(mouseY // self.SQUARE_SIZE)
-                    clicked_col = int(mouseX // self.SQUARE_SIZE)
-
-                    if self.board[clicked_row][clicked_col] is None:
-                        if self.player == 'X':
-                            self.mark_square(clicked_row, clicked_col, 'X')
-                            if self.check_win(self.player):
-                                self.game_over = True
-                                self.draw_figures()
-                                self.display_winner(self.player)
-                                break
-                            self.player = 'O'
-                        elif self.player == 'O':
-                            self.mark_square(clicked_row, clicked_col, 'O')
-                            if self.check_win(self.player):
-                                self.game_over = True
-                                self.draw_figures()
-                                self.display_winner(self.player)
-                                break
-                            self.player = 'X'
-                        self.draw_figures()
-
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_r:
-                        self.restart()
-                        self.game_over = False
-
-                if self.check_draw():
-                    font = pygame.font.Font(None, 50)
-                    text = font.render('Draw!', True, (0, 255, 0))
-                    self.screen.blit(text, (self.WIDTH // 2 - text.get_width() // 2, self.HEIGHT // 2 - text.get_height() // 2))
-                if self.game_over:
                     self.display_winner(self.player)
                     break
+                self.player = 'X'
+                self.draw_figures()
+            pygame.display.update()
+                            
+            # if self.player == 'X' and not self.game_over:
+            #     move = self.minimax(0, False)
+            #     if move['row'] is not None and move['col'] is not None:
+            #         self.board[move['row']][move['col']] = 'X'
+            #     if self.check_win(self.player):
+            #         self.game_over = True
+            #         self.draw_figures()
+            #         self.display_winner(self.player)
+            #         break
+            #     self.player = 'O'
+            #     self.draw_figures()
+            # pygame.display.update() 
+            if self.player == 'O' and not self.game_over:
+                row, col = self.q_learning()
+                if self.check_win(self.player):
+                    self.game_over = True
+                    self.draw_figures()
+                    self.display_winner(self.player)
+                    break
+                self.player = 'X'
+                self.draw_figures()       
+
+            if self.player == 'X' and not self.game_over:
+                move = self.minimax_alpha_beta(0, True, -float('inf'), float('inf'))
+                if move['row'] is not None and move['col'] is not None:
+                    self.board[move['row']][move['col']] = 'X'
+                if self.check_win(self.player):
+                    self.game_over = True
+                    self.draw_figures()
+                    self.display_winner(self.player)
+                    break
+                self.player = 'O'
+                self.draw_figures()
+            pygame.display.update()
+
+
+                # if event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
+                #     mouseX = event.pos[0]
+                #     mouseY = event.pos[1]
+                #     clicked_row = int(mouseY // self.SQUARE_SIZE)
+                #     clicked_col = int(mouseX // self.SQUARE_SIZE)
+
+                #     if self.board[clicked_row][clicked_col] is None:
+                #         if self.player == 'X':
+                #             self.mark_square(clicked_row, clicked_col, 'X')
+                #             if self.check_win(self.player):
+                #                 self.game_over = True
+                #                 self.draw_figures()
+                #                 self.display_winner(self.player)
+                #                 break
+                #             self.player = 'O'
+                #         elif self.player == 'O':
+                #             self.mark_square(clicked_row, clicked_col, 'O')
+                #             if self.check_win(self.player):
+                #                 self.game_over = True
+                #                 self.draw_figures()
+                #                 self.display_winner(self.player)
+                #                 break
+                #             self.player = 'X'
+                #         self.draw_figures()
+
+                # if event.type == pygame.KEYDOWN:
+                #     if event.key == pygame.K_r:
+                #         self.restart()
+                #         self.game_over = False
+
+            if self.check_draw():
+                font = pygame.font.Font(None, 50)
+                text = font.render('Draw!', True, (0, 255, 0))
+                self.screen.blit(text, (self.WIDTH // 2 - text.get_width() // 2, self.HEIGHT // 2 - text.get_height() // 2))
+
+            if self.game_over:
+                self.display_winner(self.player)
+                break
 
             pygame.display.update()
 
