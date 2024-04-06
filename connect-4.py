@@ -2,6 +2,8 @@ import pygame
 import sys
 import numpy as np
 import math
+import random
+
 
 class ConnectFour:
     def __init__(self):
@@ -83,6 +85,30 @@ class ConnectFour:
                     pygame.draw.circle(self.screen, self.YELLOW, (int(c*self.SQUARESIZE+self.SQUARESIZE/2), self.height-int(r*self.SQUARESIZE+self.SQUARESIZE/2)), self.RADIUS)
         pygame.display.update()
 
+    def get_best_move(self, board, piece):
+        for col in range(self.COLUMN_COUNT):
+            temp_board = board.copy()
+            if self.is_valid_location(temp_board, col):
+                row = self.get_next_open_row(temp_board, col)
+                self.drop_piece(temp_board, row, col, piece)
+                if self.winning_move(temp_board, piece):
+                    return col
+
+        for col in range(self.COLUMN_COUNT):
+            temp_board = board.copy()
+            if self.is_valid_location(temp_board, col):
+                row = self.get_next_open_row(temp_board, col)
+                self.drop_piece(temp_board, row, col, 3 - piece)
+                if self.winning_move(temp_board, 3 - piece):
+                    return col
+
+        while True:
+            col = random.randint(0, self.COLUMN_COUNT - 1)
+            if self.is_valid_location(board, col):
+                return col
+            
+    
+    
     def play(self):
         while not self.game_over:
             for event in pygame.event.get():
@@ -117,8 +143,7 @@ class ConnectFour:
 
                     # Ask for Player 2 Input
                     else:               
-                        posx = event.pos[0]
-                        col = int(math.floor(posx/self.SQUARESIZE))
+                        col = self.get_best_move(self.board, 2)
 
                         if self.is_valid_location(self.board, col):
                             row = self.get_next_open_row(self.board, col)
