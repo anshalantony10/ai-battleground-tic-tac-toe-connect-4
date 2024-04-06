@@ -2,6 +2,7 @@ import numpy as np
 import pygame
 import sys
 import random
+import time 
 
 class TicTacToe:
     def __init__(self):
@@ -31,11 +32,11 @@ class TicTacToe:
 
         self.board = [[None for _ in range(self.BOARD_COLS)] for _ in range(self.BOARD_ROWS)]
 
-        self.player = "X"
         self.player = random.choice(["X", "O"])
         self.game_over = False
         self.winner= None
         self.draw_lines()
+        self.q_table = {}
 
     def draw_lines(self):
         pygame.draw.line(self.screen, self.LINE_COLOR, (0, self.SQUARE_SIZE), (self.WIDTH, self.SQUARE_SIZE), self.LINE_WIDTH)
@@ -94,6 +95,9 @@ class TicTacToe:
             text = font.render('Player O wins!', True, (0, 255, 0))
             print("Player O wins!")
         self.screen.blit(text, (self.WIDTH // 2 - text.get_width() // 2, self.HEIGHT // 2 - text.get_height() // 2))
+        pygame.display.update() 
+        time.sleep(0.5)
+
 
     def ai_move(self):
         # Check for winning move
@@ -154,24 +158,39 @@ class TicTacToe:
                         best_score = current_score
 
         return best_score
+        
+    def get_state(self):
+        return ''.join(str(e) if e is not None else '0' for row in self.board for e in row)
+    
     def q_learning(self, alpha=0.5, gamma=0.9, epsilon=0.1):
         state = self.get_state()
+        if state not in self.q_table:
+            self.q_table[state] = np.zeros(self.BOARD_ROWS * self.BOARD_COLS)
+
+        q_values = self.q_table[state]
+
         if np.random.uniform(0, 1) < epsilon:
             # Explore: select a random action
             while True:
-                row = np.random.randint(0, self.BOARD_ROWS)
-                col = np.random.randint(0, self.BOARD_COLS)
+                action = np.random.randint(0, self.BOARD_ROWS * self.BOARD_COLS)
+                row = action // self.BOARD_COLS
+                col = action % self.BOARD_COLS
                 if self.board[row][col] is None:
                     break
         else:
             # Exploit: select the action with max value (future reward)
-            q_values = self.q_table[state]
-            indices = np.where(q_values == np.max(q_values))[0]
-            action = np.random.choice(indices)
+            while True:
+                indices = np.where(q_values == np.max(q_values))[0]
+                action = np.random.choice(indices)
+                row = action // self.BOARD_COLS
+                col = action % self.BOARD_COLS
+                if self.board[row][col] is None:
+                    break
 
         # Perform the action and get the reward
-        self.board[row][col] = 'X'
-        if self.check_win('X'):
+        self.board[row][col] = 'O'
+        reward = 0
+        if self.check_win('O'):
             reward = 1
         elif self.check_draw():
             reward = 0
@@ -180,9 +199,16 @@ class TicTacToe:
 
         # Update Q-table for Q(s, a)
         next_state = self.get_state()
-        self.q_table[state][action] = self.q_table[state][action] + alpha * (reward + gamma * np.max(self.q_table[next_state]) - self.q_table[state][action])
+        if next_state not in self.q_table:
+            self.q_table[next_state] = np.zeros(self.BOARD_ROWS * self.BOARD_COLS)
+
+        next_q_values = self.q_table[next_state]
+        max_next_q_value = np.max(next_q_values)
+
+        q_values[action] = q_values[action] + alpha * (reward + gamma * max_next_q_value - q_values[action])
 
         return row, col
+
     
     def minimax_alpha_beta(self, depth, is_maximizing, alpha, beta):
         if self.check_win('O'):
@@ -228,18 +254,18 @@ class TicTacToe:
             # for event in pygame.event.get():
                 # if event.type == pygame.QUIT:
                 #     sys.exit()
-                
-            if self.player == 'O' and not self.game_over:
-                self.ai_move()
-                if self.check_win(self.player):
-                    self.game_over = True
-                    self.draw_figures()
-                    self.display_winner(self.player)
-                    break
-                self.player = 'X'
-                self.draw_figures()
-            pygame.display.update()
-                            
+            #     # ==================
+            # if self.player == 'O' and not self.game_over:
+            #     self.ai_move()
+            #     if self.check_win(self.player):
+            #         self.game_over = True
+            #         self.draw_figures()
+            #         self.display_winner(self.player)
+            #         break
+            #     self.player = 'X'
+            #     self.draw_figures()
+            # pygame.display.update()
+                #    ===================================================         # 
             # if self.player == 'X' and not self.game_over:
             #     move = self.minimax(0, False)
             #     if move['row'] is not None and move['col'] is not None:
@@ -252,6 +278,8 @@ class TicTacToe:
             #     self.player = 'O'
             #     self.draw_figures()
             # pygame.display.update() 
+
+
             if self.player == 'O' and not self.game_over:
                 row, col = self.q_learning()
                 if self.check_win(self.player):
@@ -260,7 +288,9 @@ class TicTacToe:
                     self.display_winner(self.player)
                     break
                 self.player = 'X'
-                self.draw_figures()       
+                self.draw_figures()   
+            pygame.display.update() 
+            time.sleep(0.5)
 
             if self.player == 'X' and not self.game_over:
                 move = self.minimax_alpha_beta(0, True, -float('inf'), float('inf'))
@@ -274,7 +304,7 @@ class TicTacToe:
                 self.player = 'O'
                 self.draw_figures()
             pygame.display.update()
-
+            time.sleep(0.5)
 
                 # if event.type == pygame.MOUSEBUTTONDOWN and not self.game_over:
                 #     mouseX = event.pos[0]
@@ -313,9 +343,10 @@ class TicTacToe:
 
             if self.game_over:
                 self.display_winner(self.player)
+                time.sleep(3)
                 break
 
             pygame.display.update()
-
+            time.sleep(0.5)
 if __name__ == "__main__":
     TicTacToe().game_loop()
