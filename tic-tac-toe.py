@@ -91,9 +91,11 @@ class TicTacToe:
         if player == 'X':
             text = font.render('Player X wins!', True, (0, 255, 0))
             print("Player X wins!")
+            self.winner = 'X'
         else:
             text = font.render('Player O wins!', True, (0, 255, 0))
             print("Player O wins!")
+            self.winner = 'O'
         self.screen.blit(text, (self.WIDTH // 2 - text.get_width() // 2, self.HEIGHT // 2 - text.get_height() // 2))
         pygame.display.update() 
         time.sleep(0.5)
@@ -131,6 +133,7 @@ class TicTacToe:
     def minimax(self, depth, is_maximizing):
         if self.check_win('O'):
             return {'score': 1, 'row': None, 'col': None}
+            
         elif self.check_win('X'):
             return {'score': -1, 'row': None, 'col': None}
         elif self.check_draw():
@@ -340,6 +343,7 @@ class TicTacToe:
                 font = pygame.font.Font(None, 50)
                 text = font.render('Draw!', True, (0, 255, 0))
                 self.screen.blit(text, (self.WIDTH // 2 - text.get_width() // 2, self.HEIGHT // 2 - text.get_height() // 2))
+                break
 
             if self.game_over:
                 self.display_winner(self.player)
@@ -348,5 +352,12 @@ class TicTacToe:
 
             pygame.display.update()
             time.sleep(0.5)
+        return self.winner
+
 if __name__ == "__main__":
-    TicTacToe().game_loop()
+    winner = []
+    for _ in range(5):
+        # TicTacToe().game_loop()
+        winner.append(TicTacToe().game_loop())
+
+    print(winner)
